@@ -4,17 +4,29 @@
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Route, Station, Bus, Alert, Incident, AiRecommendation, ChatMessage } from '../types';
-import {
-  INITIAL_ROUTES,
-  INITIAL_STATIONS,
-  INITIAL_BUSES,
-  INITIAL_ALERTS,
-  INITIAL_INCIDENTS,
-  INITIAL_RECOMMENDATIONS,
-  ASSISTANT_MOCK_RESPONSES,
-  DEFAULT_AI_RESPONSE
-} from '../mocks/metroData';
+import { Route, Station, Bus, Alert, Incident, AiRecommendation, ChatMessage, DemandForecastPoint } from '../types';
+import { metroApi } from '../services/metroApi';
+
+const ASSISTANT_RESPONSES = [
+  {
+    keywords: ['como llego', 'cómo llego', 'buses a', 'ruta', 'cañaveral a estadio', 'provenza a quebras'],
+    response: 'La mejor opción recomendada por IA es tomar la ruta **R1** en el **Portal Cacique**, viajar directo o tomar la ruta **R5** en el **Portal Cañaveral** hacia el **Portal Provenza**. El tiempo estimado medio es de **20-30 minutos** con una ocupación media.'
+  },
+  {
+    keywords: ['ocupacion', 'ocupación', 'lleno', 'congestion', 'congestión', 'provenza', 'portal provenza'],
+    response: 'El **Portal Provenza** presenta ocupación alta. El sistema de inteligencia artificial sugiere aplicar despacho de unidad express de apoyo.'
+  },
+  {
+    keywords: ['tiempo', 'retraso', 'r1', 'r3', 'llegada r3'],
+    response: 'La ruta **R3** posee unidades activas con frecuencia estable. El próximo bus pasará por tu estación más cercana en pocos minutos.'
+  },
+  {
+    keywords: ['alertas', 'incidentes', 'paso algo', 'problema', 'que pasa', 'retrasos'],
+    response: 'Actualmente hay alertas activas. El centro de operaciones ya está monitoreando demoras e incidentes para desplegar buses auxiliares.'
+  }
+];
+
+const DEFAULT_AI_RESPONSE = 'Hola, soy el Asistente Inteligente de MetroFlow AI. Te guiaré con gusto sobre rutas, tiempos de llegada, alertas e información general en tiempo real del sistema Metrolínea.';
 
 interface ToastMessage {
   id: string;
@@ -30,6 +42,7 @@ interface MetroContextType {
   alerts: Alert[];
   incidents: Incident[];
   recommendations: AiRecommendation[];
+  peakDemandForecast: DemandForecastPoint[];
   toasts: ToastMessage[];
   addToast: (type: 'success' | 'warning' | 'info' | 'error', title: string, message: string) => void;
   removeToast: (id: string) => void;
@@ -56,12 +69,13 @@ interface MetroContextType {
 const MetroContext = createContext<MetroContextType | undefined>(undefined);
 
 export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [routes, setRoutes] = useState<Route[]>(INITIAL_ROUTES);
-  const [stations, setStations] = useState<Station[]>(INITIAL_STATIONS);
+  const [routes, setRoutes] = useState<Route[]>([]);
+  const [stations, setStations] = useState<Station[]>([]);
   const [buses, setBuses] = useState<Bus[]>([]);
-  const [alerts, setAlerts] = useState<Alert[]>(INITIAL_ALERTS);
-  const [incidents, setIncidents] = useState<Incident[]>(INITIAL_INCIDENTS);
-  const [recommendations, setRecommendations] = useState<AiRecommendation[]>(INITIAL_RECOMMENDATIONS);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [recommendations, setRecommendations] = useState<AiRecommendation[]>([]);
+  const [peakDemandForecast, setPeakDemandForecast] = useState<DemandForecastPoint[]>([]);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([
     {
@@ -73,9 +87,21 @@ export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   ]);
 
-  // Load initial buses
+  const loadBackendState = async () => {
+    const state = await metroApi.getState();
+    setRoutes(state.routes);
+    setStations(state.stations);
+    setBuses(state.buses);
+    setAlerts(state.alerts);
+    setIncidents(state.incidents);
+    setRecommendations(state.recommendations);
+    setPeakDemandForecast(state.peakDemandForecast);
+  };
+
   useEffect(() => {
-    setBuses(INITIAL_BUSES);
+    loadBackendState().catch(() => {
+      addToast('error', 'Backend no disponible', 'No se pudo conectar con MetroFlow API en http://localhost:5000.');
+    });
   }, []);
 
   // Toast utility
@@ -95,7 +121,7 @@ export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Search transit route intelligently based on station levels, routes, delays
   const searchRoute = (origin: string, destination: string) => {
-    if (!origin || !destination) return null;
+    if (!origin || !destination || stations.length === 0 || routes.length === 0) return null;
 
     // Normalizing
     const orig = origin.trim().toLowerCase();
@@ -149,7 +175,7 @@ export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Control Center actions: Add incident and trigger warnings
-  const addIncident = (newIncident: Omit<Incident, 'id' | 'activeDurationMinutes'>) => {
+  const addIncident = async (newIncident: Omit<Incident, 'id' | 'activeDurationMinutes'>) => {
     const id = 'INC-' + (100 + incidents.length + 1);
     const incident: Incident = {
       ...newIncident,
@@ -157,157 +183,61 @@ export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       activeDurationMinutes: 1
     };
 
-    setIncidents((prev) => [incident, ...prev]);
-
-    // Increase delay on affected routes
-    setRoutes((prevRoutes) => 
-      prevRoutes.map(route => {
-        if (incident.affectedRoute.includes(route.id) || incident.location.includes(route.origin)) {
-          return {
-            ...route,
-            delayMinutes: route.delayMinutes + 10,
-            status: 'delayed'
-          };
-        }
-        return route;
-      })
-    );
-
-    // Create an automated warning alert
-    const newAlert: Alert = {
-      id: 'AL-' + (alerts.length + 1),
-      type: 'incidente',
-      target: incident.affectedRoute,
-      level: 'critical',
-      description: `INCIDENTE DETECTADO: ${incident.type} en ${incident.location} afectando a ${incident.affectedRoute}.`,
-      recommendation: `Evitar este tramo. Agentes de tránsito asignados. Se recomienda ajuste dinámico de frecuencia.`,
-      timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      status: 'new'
-    };
-    setAlerts((prev) => [newAlert, ...prev]);
-
-    addToast('error', 'Nuevo Incidente Operativo', `${incident.type} reportado en ${incident.location}.`);
+    try {
+      await metroApi.createIncident(incident);
+      await loadBackendState();
+      addToast('error', 'Nuevo Incidente Operativo', `${incident.type} reportado en ${incident.location}.`);
+    } catch {
+      addToast('error', 'Error API', 'No se pudo registrar el incidente en el backend.');
+    }
   };
 
   // Resolve Incident (Restores transit parameters)
-  const resolveIncident = (id: string) => {
+  const resolveIncident = async (id: string) => {
     const incident = incidents.find(i => i.id === id);
     if (!incident) return;
-
-    setIncidents((prev) => prev.filter(i => i.id !== id));
-
-    // Reduce delays on affected routes
-    setRoutes((prevRoutes) => 
-      prevRoutes.map(route => {
-        if (incident.affectedRoute.includes(route.id)) {
-          return {
-            ...route,
-            delayMinutes: Math.max(0, route.delayMinutes - 8),
-            status: route.delayMinutes - 8 <= 3 ? 'normal' : 'delayed'
-          };
-        }
-        return route;
-      })
-    );
-
+    await metroApi.resolveIncident(id);
+    await loadBackendState();
     addToast('success', 'Incidente Resuelto', `Obstrucción resuelta con éxito en ${incident.location}. Se restablecen frecuencias poco a poco.`);
   };
 
   // Dismiss / Resolve alert
-  const resolveAlert = (id: string) => {
-    setAlerts((prev) => prev.map(a => a.id === id ? { ...a, status: 'resolved' as const } : a));
+  const resolveAlert = async (id: string) => {
+    await metroApi.updateAlertStatus(id, 'resolved');
+    await loadBackendState();
     addToast('info', 'Alerta Atendida', 'La notificación operativa ha sido marcada como resuelta.');
   };
 
-  const updateAlertStatus = (id: string, status: Alert['status']) => {
-    setAlerts((prev) => prev.map(a => a.id === id ? { ...a, status } : a));
+  const updateAlertStatus = async (id: string, status: Alert['status']) => {
+    await metroApi.updateAlertStatus(id, status);
+    await loadBackendState();
     addToast('success', 'Alerta Actualizada', `El estado de la alerta es ahora: ${status.toUpperCase()}`);
   };
 
   // Simulate addition of a backup bus
-  const simulateAdditionalBus = (routeId: string) => {
+  const simulateAdditionalBus = async (routeId: string) => {
     const targetRoute = routes.find(r => r.id === routeId);
     if (!targetRoute) return;
-
-    // Create backup bus
-    const newBusId = `BUS-${Math.floor(Math.random() * 200) + 800}`;
-    const newBus: Bus = {
-      id: newBusId,
-      routeId,
-      driverName: 'Conductor de Apoyo IA',
-      latitude: 45 + Math.floor(Math.random() * 20),
-      longitude: 40 + Math.floor(Math.random() * 20),
-      occupancy: 'low',
-      status: 'active',
-      nextStation: targetRoute.origin,
-      etaMinutes: 4 // Short arrival time
-    };
-
-    setBuses((prev) => [newBus, ...prev]);
-
-    // Update Route parameters reactively (higher active buses, lower delay, lower occupancy)
-    setRoutes((prevRoutes) => 
-      prevRoutes.map(r => {
-        if (r.id === routeId) {
-          const updatedActive = r.activeBuses + 1;
-          const updatedDelay = Math.max(0, r.delayMinutes - 4);
-          let updatedOccupancy: Route['occupancy'] = 'medium';
-          if (r.occupancy === 'critical') updatedOccupancy = 'high';
-          else if (r.occupancy === 'high') updatedOccupancy = 'medium';
-          else if (r.occupancy === 'medium') updatedOccupancy = 'low';
-
-          return {
-            ...r,
-            activeBuses: updatedActive,
-            delayMinutes: updatedDelay,
-            occupancy: updatedOccupancy,
-            status: updatedDelay <= 3 ? 'normal' : 'delayed'
-          };
-        }
-        return r;
-      })
-    );
-
-    // Update station congestion levels slightly if it's main origin
-    setStations((prevStations) => 
-      prevStations.map(s => {
-        if (s.name === targetRoute.origin) {
-          const current = Math.max(20, s.occupancyCurrent - 12);
-          const pred = Math.max(20, s.occupancyPrediction20Min - 15);
-          return {
-            ...s,
-            occupancyCurrent: current,
-            occupancyPrediction20Min: pred,
-            riskLevel: current > 85 ? 'critical' : current > 70 ? 'high' : current > 50 ? 'medium' : 'low'
-          };
-        }
-        return s;
-      })
-    );
-
-    addToast('success', 'Buses Adicionales Despachados', `Unidad de refuerzo de IA ${newBusId} incorporada a la ruta ${routeId}.`);
+    await metroApi.simulateAdditionalBus(routeId);
+    await loadBackendState();
+    addToast('success', 'Buses Adicionales Despachados', `Unidad de refuerzo de IA incorporada a la ruta ${routeId}.`);
   };
 
   // Apply IA Recommendations that affects states
-  const applyRecommendation = (id: string) => {
+  const applyRecommendation = async (id: string) => {
     const rec = recommendations.find(r => r.id === id);
     if (!rec || rec.applied) return;
 
-    setRecommendations((prev) => prev.map(r => r.id === id ? { ...r, applied: true } : r));
+    await metroApi.applyRecommendation(id);
 
     if (rec.type === 'frequency' && rec.targetId) {
-      // Increase route frequency
-      simulateAdditionalBus(rec.targetId);
-      simulateAdditionalBus(rec.targetId); // Dispatch double
+      await simulateAdditionalBus(rec.targetId);
+      await simulateAdditionalBus(rec.targetId);
     } else if (rec.type === 'dispatch' && rec.targetId) {
-      // Direct emergency bus
-      simulateAdditionalBus(rec.targetId);
-    } else if (rec.type === 'route') {
-      // Rerouting mitigates delays
-      setRoutes((prev) => prev.map(r => r.id === rec.targetId ? { ...r, delayMinutes: 2, status: 'normal' } : r));
-      addToast('success', 'Ruta Optimizada', `Ajuste operativo aplicado. Los buses están evitando las áreas congestionadas del Centro.`);
+      await simulateAdditionalBus(rec.targetId);
     }
 
+    await loadBackendState();
     addToast('success', 'Decisión IA Aplicada', `Recomendación: "${rec.title}" se ejecutó en tiempo real.`);
   };
 
@@ -351,14 +281,9 @@ export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Re-initialize to mock standard values
-  const resetSimulation = () => {
-    setRoutes(INITIAL_ROUTES);
-    setStations(INITIAL_STATIONS);
-    setBuses(INITIAL_BUSES);
-    setAlerts(INITIAL_ALERTS);
-    setIncidents(INITIAL_INCIDENTS);
-    setRecommendations(INITIAL_RECOMMENDATIONS);
-    
+  const resetSimulation = async () => {
+    await metroApi.reset();
+    await loadBackendState();
     addToast('info', 'Reiniciar Simulación', 'Los datos del sistema se restablecieron a sus valores de fábrica.');
   };
 
@@ -418,7 +343,7 @@ export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         suggestions = ['¿Hay retrasos en otra ruta?', '¿Cómo llego al Portal Estadio Montanini?'];
       } else {
         // Fallback search keywords
-        const staticMatch = ASSISTANT_MOCK_RESPONSES.find(r => 
+        const staticMatch = ASSISTANT_RESPONSES.find(r => 
           r.keywords.some(keyword => normalizedInput.includes(keyword))
         );
         matchedResponse = staticMatch ? staticMatch.response : DEFAULT_AI_RESPONSE;
@@ -460,6 +385,7 @@ export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         alerts,
         incidents,
         recommendations,
+        peakDemandForecast,
         toasts,
         addToast,
         removeToast,

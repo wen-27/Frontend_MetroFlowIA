@@ -37,7 +37,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
   // Quantify live parameters to populate selector cards dynamic badges
   const activeAlertsCount = alerts.filter(a => a.status !== 'resolved').length;
   const criticalStationsCount = stations.filter(s => s.riskLevel === 'critical' || s.riskLevel === 'high').length;
-  const maxDelay = Math.max(...routes.map(r => r.delayMinutes));
+  const maxDelay = routes.length ? Math.max(...routes.map(r => r.delayMinutes)) : 0;
 
   const passengerIndicators = [
     { label: 'ETA Próximo Bus', value: '6 min', color: 'emerald' as const },

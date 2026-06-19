@@ -13,7 +13,6 @@ import { OccupancyBadge } from '../../components/molecules/OccupancyBadge';
 import { Button } from '../../components/atoms/Button';
 import { Card } from '../../components/atoms/Card';
 import { AlertCard } from '../../components/molecules/AlertCard';
-import { PEAK_DEMAND_FORECAST } from '../../mocks/metroData';
 import { 
   ArrowLeft, 
   Settings, 
@@ -54,6 +53,7 @@ export const ControlCenterView: React.FC<ControlCenterViewProps> = ({
     alerts, 
     incidents, 
     recommendations, 
+    peakDemandForecast,
     addToast,
     addIncident,
     resolveIncident,
@@ -85,7 +85,7 @@ export const ControlCenterView: React.FC<ControlCenterViewProps> = ({
   const criticalStations = stations.filter(s => s.occupancyCurrent > 80);
   const activeAlerts = alerts.filter(a => a.status !== 'resolved');
   const activeIncidents = incidents.filter(i => i.status === 'active');
-  const avgDelayValue = (routes.reduce((acc, r) => acc + r.delayMinutes, 0) / routes.length);
+  const avgDelayValue = routes.length ? (routes.reduce((acc, r) => acc + r.delayMinutes, 0) / routes.length) : 0;
 
   const handleExportReport = () => {
     addToast(
@@ -215,7 +215,7 @@ export const ControlCenterView: React.FC<ControlCenterViewProps> = ({
             icon={<ShieldAlert className="w-5 h-5" />}
             subtitle={`Provenza colapsando (~92%)`}
             trend={{ value: 'Alerta crítica', isPositive: false }}
-            progressValue={(criticalStations.length / stations.length) * 100}
+            progressValue={stations.length ? (criticalStations.length / stations.length) * 100 : 0}
             colorTheme={criticalStations.length > 1 ? 'purple' : 'amber'}
           />
 
@@ -571,7 +571,7 @@ export const ControlCenterView: React.FC<ControlCenterViewProps> = ({
                       <div className="absolute inset-x-0 h-2/4 border-b border-dashed border-slate-150 pointer-events-none" />
                       <div className="absolute inset-x-0 h-3/4 border-b border-dashed border-slate-150 pointer-events-none" />
                       
-                      {PEAK_DEMAND_FORECAST.map((item, idx) => {
+                      {peakDemandForecast.map((item, idx) => {
                         const maxCount = 7500;
                         const percent = (item.passengers / maxCount) * 100;
                         const isPeak = item.risk === 'critical';

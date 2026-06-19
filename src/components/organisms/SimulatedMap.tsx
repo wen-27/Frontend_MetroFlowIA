@@ -6,7 +6,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useMetro } from '../../contexts/MetroContext';
 import { Route, Station, Bus } from '../../types';
-import { INITIAL_ROUTES } from '../../mocks/metroData';
 import { ShieldAlert, Compass, Bus as BusIcon, Info, MapPin, Zap, RefreshCw, X, Search, CheckCircle } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -106,8 +105,7 @@ export const getBusCurrentPosition = (
   fallbackOriginCoords: [number, number],
   fallbackNextCoords: [number, number]
 ): [number, number] => {
-  const staticRoute = INITIAL_ROUTES.find(r => r.id === bus.routeId);
-  const path = route?.pathCoordinates || staticRoute?.pathCoordinates;
+  const path = route?.pathCoordinates;
 
   if (!path || path.length < 2) {
     const ratio = Math.max(0.1, Math.min(0.9, 1 - (bus.etaMinutes / 25)));
@@ -416,8 +414,7 @@ export const SimulatedMap: React.FC<SimulatedMapProps> = ({
       else if (route.id === 'R6') { rColor = '#06b6d4'; rWeight = 4.5; }
 
       let points: [number, number][] = [];
-      const staticRoute = INITIAL_ROUTES.find(r => r.id === route.id);
-      const pathCoords = route.pathCoordinates || staticRoute?.pathCoordinates;
+      const pathCoords = route.pathCoordinates;
       if (pathCoords && pathCoords.length >= 2) {
         points = pathCoords;
       } else {

@@ -79,3 +79,20 @@ export interface ChatMessage {
   timestamp: string;
   suggestions?: string[];
 }
+
+export interface DemandForecastPoint {
+  hour: string;
+  passengers: number;
+  capacity: number;
+  risk: 'low' | 'medium' | 'high' | 'critical';
+}
+
+export interface MetroStatePayload {
+  routes: Route[];
+  stations: Station[];
+  buses: Bus[];
+  alerts: Alert[];
+  incidents: Incident[];
+  recommendations: AiRecommendation[];
+  peakDemandForecast: DemandForecastPoint[];
+}
