@@ -19,26 +19,41 @@ interface SimulatedMapProps {
 
 // Coordinate mapping in Bucaramanga, Santander, Colombia
 const REAL_STATION_COORDS: Record<string, [number, number]> = {
-  'Cañaveral': [7.0658, -73.1022],
-  'Floridablanca': [7.0622, -73.0864],
-  'Provenza': [7.0945, -73.1118],
-  'Girón': [7.0734, -73.1691],
-  'Centro': [7.1196, -73.1225],
-  'UIS': [7.1378, -73.1212],
-  'Portal Norte': [7.1554, -73.1245],
-  'Cabecera': [7.1147, -73.1121],
+  'Portal Parque de los Niños': [7.1255442, -73.1182953],
+  'Portal Parque San Pío': [7.1184154, -73.1113434],
+  'Portal Parque de las Cigarras': [7.1031571, -73.12144],
+  'Portal la Rosita': [7.1126888, -73.1221378],
+  'Portal Parque Santander': [7.1194068, -73.1227037],
+  'Portal Cacique': [7.0994344, -73.1067222],
+  'Portal Cañaveral': [7.0707924, -73.1054283],
+  'Portal Quebrada Seca': [7.1223949, -73.1282145],
+  'Portal Provenza': [7.0883168, -73.1084067],
+  'Portal Estadio Montanini': [7.1364354, -73.1178984],
+  // Keep original ones for backward compatibility
+  'Cañaveral': [7.0707924, -73.1054283],
+  'Provenza': [7.0883168, -73.1084067],
+  'Centro': [7.1194068, -73.1227037],
+  'UIS': [7.1364354, -73.1178984],
+  'Portal Norte': [7.1364354, -73.1178984]
 };
 
 // SVG Coordinates for the schematic view
 const SCHEMATIC_STATION_COORDS: Record<string, { x: number; y: number; color: string }> = {
-  'Cañaveral': { x: 150, y: 500, color: '#3b82f6' },      
-  'Floridablanca': { x: 120, y: 320, color: '#10b981' },  
-  'Provenza': { x: 380, y: 380, color: '#a855f7' },       
-  'Girón': { x: 620, y: 520, color: '#f59e0b' },          
-  'Centro': { x: 740, y: 220, color: '#06b6d4' },         
-  'UIS': { x: 880, y: 120, color: '#ec4899' },            
-  'Portal Norte': { x: 860, y: 340, color: '#ef4444' },   
-  'Cabecera': { x: 550, y: 160, color: '#14b8a6' },       
+  'Portal Parque de los Niños': { x: 500, y: 155, color: '#3b82f6' },
+  'Portal Parque San Pío': { x: 740, y: 220, color: '#10b981' },
+  'Portal Parque de las Cigarras': { x: 300, y: 450, color: '#a855f7' },
+  'Portal la Rosita': { x: 250, y: 300, color: '#f59e0b' },
+  'Portal Parque Santander': { x: 450, y: 220, color: '#06b6d4' },
+  'Portal Cacique': { x: 600, y: 380, color: '#ec4899' },
+  'Portal Cañaveral': { x: 150, y: 560, color: '#ef4444' },
+  'Portal Quebrada Seca': { x: 180, y: 180, color: '#14b8a6' },
+  'Portal Provenza': { x: 380, y: 500, color: '#8b5cf6' },
+  'Portal Estadio Montanini': { x: 650, y: 80, color: '#f43f5e' },
+  // Compatibility
+  'Cañaveral': { x: 150, y: 560, color: '#ef4444' },
+  'Provenza': { x: 380, y: 500, color: '#8b5cf6' },
+  'Centro': { x: 450, y: 220, color: '#06b6d4' },
+  'UIS': { x: 650, y: 80, color: '#f43f5e' }
 };
 
 // Interpolates a coordinate [lat, lng] along a multi-point polyline given a ratio between 0.0 and 1.0
@@ -154,36 +169,48 @@ export function getPreviousStationName(routeId: string, nextStation: string): st
   const normId = routeId.toUpperCase();
   const normNext = nextStation.trim();
 
-  if (normId === 'T2') {
-    if (normNext === 'Provenza') return 'Cañaveral';
-    if (normNext === 'Centro') return 'Provenza';
-    if (normNext === 'UIS') return 'Centro';
-    if (normNext === 'Cañaveral') return 'Provenza';
-  }
-  if (normId === 'P8') {
-    if (normNext === 'Cabecera') return 'Provenza';
-    if (normNext === 'Centro') return 'Cabecera';
-    if (normNext === 'Provenza') return 'Cabecera';
-  }
-  if (normId === 'AB1') {
-    if (normNext === 'Cabecera') return 'Portal Norte';
-    if (normNext === 'Portal Norte') return 'Cabecera';
-  }
+  // R1: Portal Cacique -> Portal Parque San Pío -> Portal Parque de los Niños -> Portal Estadio Montanini
   if (normId === 'R1') {
-    if (normNext === 'Provenza') return 'Floridablanca';
-    if (normNext === 'Centro') return 'Provenza';
-    if (normNext === 'Floridablanca') return 'Provenza';
+    if (normNext === 'Portal Parque de los Niños') return 'Portal Parque San Pío';
+    if (normNext === 'Portal Parque San Pío') return 'Portal Cacique';
+    if (normNext === 'Portal Estadio Montanini') return 'Portal Parque de los Niños';
+    return 'Portal Cacique';
   }
+  // R2: Portal Cacique -> Portal la Rosita -> Portal Parque de las Cigarras
+  if (normId === 'R2') {
+    if (normNext === 'Portal la Rosita') return 'Portal Cacique';
+    if (normNext === 'Portal Parque de las Cigarras') return 'Portal la Rosita';
+    return 'Portal la Rosita';
+  }
+  // R3: Portal Cacique -> Portal la Rosita -> Portal Parque Santander -> Portal Parque de los Niños -> Portal Estadio Montanini
   if (normId === 'R3') {
-    if (normNext === 'Provenza') return 'Girón';
-    if (normNext === 'Girón') return 'Provenza';
+    if (normNext === 'Portal la Rosita') return 'Portal Cacique';
+    if (normNext === 'Portal Parque Santander') return 'Portal la Rosita';
+    if (normNext === 'Portal Parque de los Niños') return 'Portal Parque Santander';
+    if (normNext === 'Portal Estadio Montanini') return 'Portal Parque de los Niños';
+    return 'Portal Cacique';
   }
-  if (normId === 'RUTA1') {
-    if (normNext === 'Centro') return 'Provenza';
-    if (normNext === 'Provenza') return 'Centro';
+  // R4: Portal Cacique <-> Portal Provenza
+  if (normId === 'R4') {
+    if (normNext === 'Portal Provenza') return 'Portal Cacique';
+    return 'Portal Provenza';
+  }
+  // R5: Portal Provenza <-> Portal Cañaveral
+  if (normId === 'R5') {
+    if (normNext === 'Portal Cañaveral') return 'Portal Provenza';
+    return 'Portal Cañaveral';
+  }
+  // R6: Portal Provenza <-> Portal Quebrada Seca
+  if (normId === 'R6') {
+    if (normNext === 'Portal Quebrada Seca') return 'Portal Provenza';
+    return 'Portal Quebrada Seca';
   }
 
-  return 'Provenza';
+  // Fallbacks for compatibility
+  if (normNext === 'Centro') return 'Provenza';
+  if (normNext === 'UIS') return 'Centro';
+
+  return 'Portal Provenza';
 }
 
 export const SimulatedMap: React.FC<SimulatedMapProps> = ({
@@ -217,12 +244,12 @@ export const SimulatedMap: React.FC<SimulatedMapProps> = ({
 
   // Schematic transit routes list
   const routePaths = [
-    { id: 'T2', name: 'Ruta T2 Troncal', points: ['Cañaveral', 'Provenza', 'Centro', 'UIS'], color: '#3b82f6', width: 4 },
-    { id: 'P8', name: 'Ruta P8', points: ['Provenza', 'Cabecera', 'Centro'], color: '#a855f7', width: 3 },
-    { id: 'AB1', name: 'Ruta AB1 Alimentador', points: ['Portal Norte', 'Cabecera'], color: '#06b6d4', width: 3 },
-    { id: 'R1', name: 'Ruta R1', points: ['Floridablanca', 'Provenza', 'Centro'], color: '#10b981', width: 3 },
-    { id: 'R3', name: 'Ruta R3', points: ['Girón', 'Provenza'], color: '#f59e0b', width: 3 },
-    { id: 'RUTA1', name: 'Ruta 1', points: ['Provenza', 'Centro'], color: '#ef4444', width: 4 }
+    { id: 'R1', name: 'Ruta 1', points: ['Portal Cacique', 'Portal Parque San Pío', 'Portal Parque de los Niños', 'Portal Estadio Montanini'], color: '#10b981', width: 4 },
+    { id: 'R2', name: 'Ruta 2', points: ['Portal Cacique', 'Portal la Rosita', 'Portal Parque de las Cigarras'], color: '#3b82f6', width: 3 },
+    { id: 'R3', name: 'Ruta 3', points: ['Portal Cacique', 'Portal la Rosita', 'Portal Parque Santander', 'Portal Parque de los Niños', 'Portal Estadio Montanini'], color: '#f59e0b', width: 4 },
+    { id: 'R4', name: 'Ruta 4', points: ['Portal Cacique', 'Portal Provenza'], color: '#a855f7', width: 3 },
+    { id: 'R5', name: 'Ruta 5', points: ['Portal Provenza', 'Portal Cañaveral'], color: '#ef4444', width: 4 },
+    { id: 'R6', name: 'Ruta 6', points: ['Portal Provenza', 'Portal Quebrada Seca'], color: '#06b6d4', width: 3 }
   ];
 
   // Map state selections sync handlers
@@ -262,7 +289,7 @@ export const SimulatedMap: React.FC<SimulatedMapProps> = ({
     const map = L.map(mapContainerRef.current, {
       zoomControl: false,
       attributionControl: true
-    }).setView([7.1085, -73.1180], 13); // Adjusted to frame all stations nicely
+    }).setView([7.1085, -73.1180], 13.5);
 
     // Add Tile Layer
     const tileUrl = basemap === 'dark' 
@@ -283,7 +310,50 @@ export const SimulatedMap: React.FC<SimulatedMapProps> = ({
     dynamicLayersRef.current = dynamicLayers;
     mapRef.current = map;
 
+    // Beautiful initial fit bounds of actual station coordinates
+    const coords = Object.values(REAL_STATION_COORDS);
+    const bounds = L.latLngBounds(coords);
+    map.fitBounds(bounds, { padding: [35, 35] });
+
+    // Handle initial size invalidation to fix the Leaflet zero-width tab bug
+    const timers = [
+      setTimeout(() => {
+        if (mapRef.current) {
+          mapRef.current.invalidateSize();
+          mapRef.current.fitBounds(bounds, { padding: [35, 35] });
+        }
+      }, 50),
+      setTimeout(() => {
+        if (mapRef.current) {
+          mapRef.current.invalidateSize();
+          mapRef.current.fitBounds(bounds, { padding: [35, 35] });
+        }
+      }, 200),
+      setTimeout(() => {
+        if (mapRef.current) {
+          mapRef.current.invalidateSize();
+          mapRef.current.fitBounds(bounds, { padding: [35, 35] });
+        }
+      }, 600)
+    ];
+
+    // Resize observer to handle flexbox scaling or fast tab switching
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && mapContainerRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        if (mapRef.current) {
+          mapRef.current.invalidateSize();
+          mapRef.current.fitBounds(bounds, { padding: [35, 35] });
+        }
+      });
+      resizeObserver.observe(mapContainerRef.current);
+    }
+
     return () => {
+      timers.forEach(clearTimeout);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
@@ -338,12 +408,12 @@ export const SimulatedMap: React.FC<SimulatedMapProps> = ({
       let rWeight = 4.5;
       let rDashArray: string | undefined = undefined;
 
-      if (route.id === 'T2') { rColor = '#3b82f6'; rWeight = 5.5; rDashArray = '8, 8'; }
-      else if (route.id === 'P8') { rColor = '#a855f7'; rWeight = 4.5; }
-      else if (route.id === 'AB1') { rColor = '#06b6d4'; rWeight = 4.5; }
-      else if (route.id === 'R1') { rColor = '#10b981'; rWeight = 4.5; }
-      else if (route.id === 'R3') { rColor = '#f59e0b'; rWeight = 4.5; }
-      else if (route.id === 'RUTA1') { rColor = '#ef4444'; rWeight = 5.0; }
+      if (route.id === 'R1') { rColor = '#10b981'; rWeight = 5.0; }
+      else if (route.id === 'R2') { rColor = '#3b82f6'; rWeight = 4.5; }
+      else if (route.id === 'R3') { rColor = '#f59e0b'; rWeight = 5.0; rDashArray = '8, 8'; }
+      else if (route.id === 'R4') { rColor = '#a855f7'; rWeight = 4.5; }
+      else if (route.id === 'R5') { rColor = '#ef4444'; rWeight = 4.5; }
+      else if (route.id === 'R6') { rColor = '#06b6d4'; rWeight = 4.5; }
 
       let points: [number, number][] = [];
       const staticRoute = INITIAL_ROUTES.find(r => r.id === route.id);
@@ -351,12 +421,14 @@ export const SimulatedMap: React.FC<SimulatedMapProps> = ({
       if (pathCoords && pathCoords.length >= 2) {
         points = pathCoords;
       } else {
-        const stationsList = route.id === 'T2' ? ['Cañaveral', 'Provenza', 'Centro', 'UIS']
-          : route.id === 'P8' ? ['Provenza', 'Cabecera', 'Centro']
-          : route.id === 'AB1' ? ['Portal Norte', 'Cabecera']
-          : route.id === 'R1' ? ['Floridablanca', 'Provenza', 'Centro']
-          : route.id === 'RUTA1' ? ['Provenza', 'Centro']
-          : ['Girón', 'Provenza'];
+        const stationsList = 
+          route.id === 'R1' ? ['Portal Cacique', 'Portal Parque San Pío', 'Portal Parque de los Niños', 'Portal Estadio Montanini']
+          : route.id === 'R2' ? ['Portal Cacique', 'Portal la Rosita', 'Portal Parque de las Cigarras']
+          : route.id === 'R3' ? ['Portal Cacique', 'Portal la Rosita', 'Portal Parque Santander', 'Portal Parque de los Niños', 'Portal Estadio Montanini']
+          : route.id === 'R4' ? ['Portal Cacique', 'Portal Provenza']
+          : route.id === 'R5' ? ['Portal Provenza', 'Portal Cañaveral']
+          : route.id === 'R6' ? ['Portal Provenza', 'Portal Quebrada Seca']
+          : ['Portal Provenza', 'Portal Cacique'];
         points = stationsList
           .map(pt => REAL_STATION_COORDS[pt])
           .filter(Boolean) as [number, number][];
@@ -456,7 +528,7 @@ export const SimulatedMap: React.FC<SimulatedMapProps> = ({
 
             <!-- Label -->
             <div class="absolute top-6 bg-slate-950/90 border border-slate-800 text-[9px] text-slate-200 px-1.5 py-0.5 rounded shadow-md whitespace-nowrap font-semibold font-sans tracking-wide">
-              ${name} <span class="opacity-60">(${stationData?.occupancyCurrent || 0}%)</span>
+              ${name.replace('Portal ', '')} <span class="opacity-60">(${stationData?.occupancyCurrent || 0}%)</span>
             </div>
           </div>
         `,
@@ -561,7 +633,7 @@ export const SimulatedMap: React.FC<SimulatedMapProps> = ({
         
         {/* Interactive Search Overlay on real-time map */}
         {mapViewMode === 'real' && (
-          <div className="absolute top-3 left-3 z-[600] w-64 md:w-72 font-sans">
+          <div className="absolute top-3 left-3 right-3 sm:right-auto z-[600] sm:w-72 font-sans">
             <div className="relative">
               <div className="flex bg-slate-950/95 border border-slate-800/80 rounded-lg shadow-xl p-1 items-center">
                 <input
@@ -624,7 +696,7 @@ export const SimulatedMap: React.FC<SimulatedMapProps> = ({
 
         {/* Floating Basemap Style switcher */}
         {mapViewMode === 'real' && (
-          <div className="absolute top-3 right-3 z-[600] font-sans">
+          <div className="absolute top-16 right-3 sm:top-3 z-[600] font-sans">
             <div className="flex bg-slate-950/95 border border-slate-800 rounded-lg shadow-xl p-0.5 select-none text-[9px] font-mono font-bold">
               <button
                 type="button"

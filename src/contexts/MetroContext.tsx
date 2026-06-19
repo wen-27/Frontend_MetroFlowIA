@@ -69,7 +69,7 @@ export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       sender: 'ai',
       text: '🤖 ¡Hola! Soy el Asistente de Movilidad de MetroFlow AI. Te ayudaré a consultar rutas, estados del servicio en tiempo real y tiempos estimados de llegada en Metrolínea. ¿A dónde deseas viajar hoy?',
       timestamp: '09:30 AM',
-      suggestions: ['¿Cómo llego de Cañaveral a la UIS?', '¿Hay retrasos actuales?', '¿Está llena la estación Provenza?']
+      suggestions: ['¿Cómo llego de Portal Cañaveral al Portal Estadio Montanini?', '¿Hay retrasos actuales?', '¿Está llena la estación Portal Provenza?']
     }
   ]);
 
@@ -386,20 +386,20 @@ export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       // Dynamic real-time values puller
       if (normalizedInput.includes('provenza')) {
-        const provState = stations.find(s => s.name === 'Provenza');
-        const occupancy = provState ? provState.occupancyCurrent : 92;
-        matchedResponse = `La estación **Provenza** presenta una ocupación actual del **${occupancy}%** (${occupancy > 85 ? 'Nivel Crítico' : occupancy > 60 ? 'Alto' : 'Normal'}). ${
+        const provState = stations.find(s => s.name === 'Portal Provenza');
+        const occupancy = provState ? provState.occupancyCurrent : 94;
+        matchedResponse = `La estación **Portal Provenza** presenta una ocupación actual del **${occupancy}%** (${occupancy > 85 ? 'Nivel Crítico' : occupancy > 60 ? 'Alto' : 'Normal'}). ${
           occupancy > 80 
-            ? 'La IA recomienda abordar las unidades troncales T2 que pasan cada 6 minutos.' 
+            ? 'La IA recomienda abordar las unidades exprés R5 o R6 que pasan frecuentemente.' 
             : 'El flujo de transbordo se encuentra estabilizado.'
         }`;
-        suggestions = ['¿Cómo llego de Cañaveral a la UIS?', '¿Hay retrasos actuales?'];
-      } else if (normalizedInput.includes('cañaveral') && normalizedInput.includes('uis')) {
-        const t2Route = routes.find(r => r.id === 'T2');
-        const delay = t2Route ? t2Route.delayMinutes : 2;
-        const eta = buses.find(b => b.routeId === 'T2')?.etaMinutes || 6;
-        matchedResponse = `Para ir de **Cañaveral** a la **UIS**, la ruta recomendada es tomar la **T2** (frecuencia actual: ${t2Route?.activeBuses} buses activos). El próximo bus pasará por Cañaveral en **${eta} minutos**. El trayecto estimulado es de **${38 + delay} minutos** (retraso actual en ruta: ${delay} min).`;
-        suggestions = ['¿Está llena la estación Provenza?', '¿Hay retrasos actuales?'];
+        suggestions = ['¿Cómo llego de Portal Cañaveral al Portal Estadio Montanini?', '¿Hay retrasos actuales?'];
+      } else if (normalizedInput.includes('cañaveral') && (normalizedInput.includes('estadio') || normalizedInput.includes('montanini'))) {
+        const r3Route = routes.find(r => r.id === 'R3') || routes.find(r => r.id === 'R1');
+        const delay = r3Route ? r3Route.delayMinutes : 5;
+        const eta = buses.find(b => b.routeId === 'R3')?.etaMinutes || 4;
+        matchedResponse = `Para ir del **Portal Cañaveral** al **Portal Estadio Montanini**, la ruta recomendada es tomar el conector o la ruta **R3** (frecuencia actual: ${r3Route?.activeBuses} buses activos). El próximo bus pasará por Cañaveral en **${eta} minutos**. El trayecto estimado es de **${34 + delay} minutos** (retraso actual en ruta: ${delay} min).`;
+        suggestions = ['¿Está llena la estación Portal Provenza?', '¿Hay retrasos actuales?'];
       } else if (normalizedInput.includes('retraso') || normalizedInput.includes('alertas') || normalizedInput.includes('problema')) {
         const activeDelays = routes.filter(r => r.delayMinutes > 0);
         if (activeDelays.length > 0) {
@@ -408,21 +408,21 @@ export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             activeDelays.sort((a,b)=>b.delayMinutes - a.delayMinutes)[0]?.id
           }**. El centro de operaciones ya está desplegando buses auxiliares de apoyo.`;
         } else {
-          matchedResponse = '¡Excelente noticia! Todas las rutas troncales de Metrolínea se encuentran operando **A TIEMPO** sin retrasos significativos.';
+          matchedResponse = '¡Excelente noticia! Todas las rutas de Metrolínea se encuentran operando **A TIEMPO** sin retrasos significativos.';
         }
-        suggestions = ['¿Cómo llego de Cañaveral a la UIS?', '¿Está llena la estación Provenza?'];
-      } else if (normalizedInput.includes('t2') || normalizedInput.includes('ruta t2')) {
-        const t2 = routes.find(r => r.id === 'T2');
-        const eta = buses.find(b => b.routeId === 'T2')?.etaMinutes || 6;
-        matchedResponse = `La ruta **T2 (Cañaveral → UIS)** cuenta con **${t2?.activeBuses} buses activos**. Próximo arribo en **${eta} minutos**. Estado del tramo: **${t2?.status.toUpperCase()}** con retraso de **${t2?.delayMinutes} min**.`;
-        suggestions = ['¿Hay retrasos en otra ruta?', '¿Cómo llego a la UIS?'];
+        suggestions = ['¿Cómo llego de Portal Cañaveral al Portal Estadio Montanini?', '¿Está llena la estación Portal Provenza?'];
+      } else if (normalizedInput.includes('r3') || normalizedInput.includes('ruta r3')) {
+        const r3 = routes.find(r => r.id === 'R3');
+        const eta = buses.find(b => b.routeId === 'R3')?.etaMinutes || 4;
+        matchedResponse = `La ruta **R3 (Portal Cacique ↔ Portal Estadio Montanini)** cuenta con **${r3?.activeBuses} buses activos**. Próximo arribo en **${eta} minutos**. Estado del tramo: **${r3?.status.toUpperCase()}** con retraso de **${r3?.delayMinutes} min**.`;
+        suggestions = ['¿Hay retrasos en otra ruta?', '¿Cómo llego al Portal Estadio Montanini?'];
       } else {
         // Fallback search keywords
         const staticMatch = ASSISTANT_MOCK_RESPONSES.find(r => 
           r.keywords.some(keyword => normalizedInput.includes(keyword))
         );
         matchedResponse = staticMatch ? staticMatch.response : DEFAULT_AI_RESPONSE;
-        suggestions = ['¿Cómo llego de Cañaveral a la UIS?', '¿Hay retrasos actuales?', '¿Está llena la estación Provenza?'];
+        suggestions = ['¿Cómo llego del Portal Cañaveral al Portal Estadio Montanini?', '¿Hay retrasos actuales?', '¿Está llena la estación Portal Provenza?'];
       }
 
       const aiMsgId = Math.random().toString(36).substring(2, 9);
@@ -446,7 +446,7 @@ export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         sender: 'ai',
         text: '🤖 Historial reiniciado. Cuéntame, ¿en qué puedo asistirte con respecto al sistema de Metrolínea hoy?',
         timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        suggestions: ['¿Cómo llego de Cañaveral a la UIS?', '¿Hay retrasos?', '¿Qué tan llena está Provenza?']
+        suggestions: ['¿Cómo llego del Portal Cañaveral al Portal Estadio Montanini?', '¿Hay retrasos?', '¿Qué tan llena está la estación Portal Provenza?']
       }
     ]);
   };

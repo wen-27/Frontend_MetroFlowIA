@@ -27,36 +27,38 @@ import {
 
 function NavigationFooter({ currentView, setView }: { currentView: string; setView: (v: any) => void }) {
   return (
-    <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 glass px-6 py-3 rounded-full shadow-lg flex items-center gap-6 z-50">
+    <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 glass px-4 sm:px-6 py-2.5 sm:py-3 rounded-full shadow-lg flex items-center justify-around sm:justify-start gap-3 sm:gap-6 z-[2050] w-[92%] sm:w-auto max-w-md">
       <button 
         onClick={() => setView('landing')} 
-        className={`text-xs font-bold uppercase transition flex items-center gap-1.5 cursor-pointer focus:outline-none ${
+        className={`text-[11px] sm:text-xs font-bold uppercase transition flex items-center gap-1 sm:gap-1.5 cursor-pointer focus:outline-none ${
           currentView === 'landing' ? 'text-blue-600 font-extrabold' : 'text-slate-500 hover:text-blue-600'
         }`}
       >
-        <HelpCircle className="w-4 h-4" /> Inicio
+        <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Inicio
       </button>
 
       <div className="w-px h-4 bg-slate-300" />
 
       <button 
         onClick={() => setView('passenger')} 
-        className={`text-xs font-bold uppercase transition flex items-center gap-1.5 cursor-pointer focus:outline-none ${
+        className={`text-[11px] sm:text-xs font-bold uppercase transition flex items-center gap-1 sm:gap-1.5 cursor-pointer focus:outline-none ${
           currentView === 'passenger' ? 'text-blue-600 font-extrabold' : 'text-slate-500 hover:text-blue-600'
         }`}
       >
-        <User className="w-4 h-4" /> Pasajero
+        <User className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Pasajero
       </button>
 
       <div className="w-px h-4 bg-slate-300" />
 
       <button 
         onClick={() => setView('admin')} 
-        className={`text-xs font-bold uppercase transition flex items-center gap-1.5 cursor-pointer focus:outline-none ${
+        className={`text-[11px] sm:text-xs font-bold uppercase transition flex items-center gap-1 sm:gap-1.5 cursor-pointer focus:outline-none ${
           currentView === 'admin' ? 'text-violet-600 font-extrabold' : 'text-slate-500 hover:text-violet-600'
         }`}
       >
-        <Shield className="w-4 h-4" /> Centro de Control
+        <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> 
+        <span className="hidden sm:inline">Centro de Control</span>
+        <span className="sm:hidden">Control</span>
       </button>
     </nav>
   );
@@ -90,7 +92,7 @@ function MainApp() {
       <NavigationFooter currentView={currentView} setView={setCurrentView} />
 
       {/* REAL-TIME SYSTEM STATE POPUP TOASTS */}
-      <div className="fixed bottom-20 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none p-4">
+      <div className="fixed bottom-24 right-4 left-4 sm:left-auto sm:right-4 sm:w-96 max-w-md z-[3000] flex flex-col gap-2 pointer-events-none p-4">
         {toasts.map((toast) => {
           const styles = {
             success: {

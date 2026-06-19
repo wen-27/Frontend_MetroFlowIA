@@ -161,7 +161,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          placeholder="Ej: ¿Hay algún retraso en la ruta T2?"
+          placeholder="Ej: ¿Hay algún retraso en la ruta R3?"
           className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 bg-slate-50/50"
         />
         

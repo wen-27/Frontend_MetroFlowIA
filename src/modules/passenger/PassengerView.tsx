@@ -83,10 +83,10 @@ export const PassengerView: React.FC<PassengerViewProps> = ({
   const activeAlerts = alerts.filter(a => a.status !== 'resolved');
 
   return (
-    <div id={id} className="min-h-screen bg-[#f4f7fb] text-slate-900 pb-16">
+    <div id={id} className="min-h-screen bg-[#f4f7fb] text-slate-900 pb-32">
       
       {/* HEADER SECTION */}
-      <header className="glass sticky top-0 z-40 shadow-sm shrink-0">
+      <header className="glass sticky top-0 z-[2000] shadow-sm shrink-0">
         <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button 
@@ -96,7 +96,8 @@ export const PassengerView: React.FC<PassengerViewProps> = ({
               className="border-slate-350 hover:bg-slate-100 text-slate-700 cursor-pointer"
               icon={<ArrowLeft className="w-4 h-4" />}
             >
-              Volver al inicio
+              <span className="hidden sm:inline">Volver al inicio</span>
+              <span className="sm:hidden">Volver</span>
             </Button>
             
             <div className="h-6 w-px bg-slate-300" />
@@ -119,7 +120,7 @@ export const PassengerView: React.FC<PassengerViewProps> = ({
             </span>
             <button
               onClick={() => {
-                setActiveTab('alerts');
+                setMainTab('etas'); // Ir a la pestaña que tiene las alertas y ETAs
                 addToast('info', 'Incidentes Críticos', `Mostrando ${activeAlerts.length} alertas activas del sistema.`);
               }}
               className="relative p-2 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-100/60 cursor-pointer transition"
@@ -331,10 +332,10 @@ export const PassengerView: React.FC<PassengerViewProps> = ({
           <div className="lg:col-span-8 space-y-6">
             
             {/* TABS CONTROLLER CONTAINER */}
-            <div className="bg-white rounded-xl border border-slate-200 p-1 flex gap-1 shadow-sm">
+            <div className="bg-white rounded-xl border border-slate-200 p-1 flex overflow-x-auto whitespace-nowrap gap-1 shadow-sm scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none]">
               <button
                 onClick={() => setMainTab('map')}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-bold rounded-lg transition-all cursor-pointer focus:outline-none ${
+                className={`flex-1 sm:flex-initial shrink-0 flex items-center justify-center gap-1.5 py-2.5 px-4 text-xs font-bold rounded-lg transition-all cursor-pointer focus:outline-none ${
                   mainTab === 'map' 
                     ? 'bg-blue-600 text-white shadow-xs' 
                     : 'text-slate-500 hover:text-blue-600 hover:bg-slate-50'
@@ -344,7 +345,7 @@ export const PassengerView: React.FC<PassengerViewProps> = ({
               </button>
               <button
                 onClick={() => setMainTab('etas')}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-bold rounded-lg transition-all cursor-pointer focus:outline-none ${
+                className={`flex-1 sm:flex-initial shrink-0 flex items-center justify-center gap-1.5 py-2.5 px-4 text-xs font-bold rounded-lg transition-all cursor-pointer focus:outline-none ${
                   mainTab === 'etas' 
                     ? 'bg-blue-600 text-white shadow-xs' 
                     : 'text-slate-500 hover:text-blue-600 hover:bg-slate-50'
@@ -354,7 +355,7 @@ export const PassengerView: React.FC<PassengerViewProps> = ({
               </button>
               <button
                 onClick={() => setMainTab('chat')}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-bold rounded-lg transition-all cursor-pointer focus:outline-none relative ${
+                className={`flex-1 sm:flex-initial shrink-0 flex items-center justify-center gap-1.5 py-2.5 px-4 text-xs font-bold rounded-lg transition-all cursor-pointer focus:outline-none relative ${
                   mainTab === 'chat' 
                     ? 'bg-blue-600 text-white shadow-xs' 
                     : 'text-slate-500 hover:text-blue-600 hover:bg-slate-50'
@@ -370,7 +371,7 @@ export const PassengerView: React.FC<PassengerViewProps> = ({
 
             {/* TAB PANELS: MAP */}
             {mainTab === 'map' && (
-              <Card className="p-5 animate-slide-up">
+              <Card className="p-5 animate-slide-up relative z-10">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-1.5">
                     <Compass className="w-5 h-5 text-blue-600" />
@@ -386,7 +387,7 @@ export const PassengerView: React.FC<PassengerViewProps> = ({
                 <SimulatedMap interactive={true} className="w-full" />
                 
                 <div className="mt-4 bg-slate-50 p-3.5 rounded-xl border border-slate-150 text-xs text-slate-600 leading-relaxed font-semibold">
-                  📌 <strong>Guía del Usuario:</strong> Los buses con etiqueta <span className="text-indigo-600 font-bold">T2</span> y <span className="text-purple-600 font-bold">P8</span> circulan en carriles exclusivos de la Autopista Sur. Las líneas punteadas muestran el sentido de avance satelital continuo.
+                  📌 <strong>Guía del Usuario:</strong> Los buses con etiqueta <span className="text-indigo-600 font-bold">R1</span> y <span className="text-purple-600 font-bold">R3</span> circulan en carriles preferenciales. Las líneas punteadas muestran el sentido de avance satelital continuo.
                 </div>
               </Card>
             )}

@@ -69,12 +69,12 @@ export const ControlCenterView: React.FC<ControlCenterViewProps> = ({
   const [mainTab, setMainTab] = useState<'gps' | 'corridors' | 'demand'>('gps');
 
   // Selected Route or Station for sub-details
-  const [selectedRouteId, setSelectedRouteId] = useState<string>('T2');
+  const [selectedRouteId, setSelectedRouteId] = useState<string>('R1');
   
   // Incident submission form state
   const [newIncType, setNewIncType] = useState('Obstrucción mecánica vehicular');
-  const [newIncLocation, setNewIncLocation] = useState('Sector Cañaveral Norte');
-  const [newIncRoute, setNewIncRoute] = useState('T2');
+  const [newIncLocation, setNewIncLocation] = useState('Sector Provenza');
+  const [newIncRoute, setNewIncRoute] = useState('R1');
   const [newIncOfficer, setNewIncOfficer] = useState('Inspector Carlos Arenas');
 
   // Interactive Demand Chart Hover State
@@ -120,10 +120,10 @@ export const ControlCenterView: React.FC<ControlCenterViewProps> = ({
   };
 
   return (
-    <div id={id} className="min-h-screen bg-[#f4f7fb] text-slate-900 pb-16">
+    <div id={id} className="min-h-screen bg-[#f4f7fb] text-slate-900 pb-32">
       
       {/* ADMINISTRATIVE TOPBAR ACTIONS */}
-      <header className="glass sticky top-0 z-40 shadow-sm shrink-0">
+      <header className="glass sticky top-0 z-[2000] shadow-sm shrink-0">
         <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8 flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Button 
@@ -133,20 +133,21 @@ export const ControlCenterView: React.FC<ControlCenterViewProps> = ({
               className="border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer"
               icon={<ArrowLeft className="w-4 h-4" />}
             >
-              Volver al inicio
+              <span className="hidden sm:inline">Volver al inicio</span>
+              <span className="sm:hidden">Volver</span>
             </Button>
             
-            <div className="h-6 w-px bg-slate-350" />
+            <div className="h-6 w-px bg-slate-355" />
 
             <div className="flex items-center gap-2">
               <span className="font-extrabold text-lg text-slate-900 tracking-tight flex items-center gap-1.5">
                 Metro<span className="text-blue-600">Flow</span> <span className="bg-gradient-to-r from-violet-600 to-indigo-600 text-transparent bg-clip-text font-black">AI</span>
-                <span className="text-[10px] font-bold text-slate-400 font-mono tracking-wider pl-1.5 uppercase">// CENTRO_CONTROL</span>
+                <span className="text-[10px] font-bold text-slate-400 font-mono tracking-wider pl-1.5 uppercase hidden sm:inline">// CENTRO_CONTROL</span>
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="outline"
               size="sm"
@@ -154,7 +155,8 @@ export const ControlCenterView: React.FC<ControlCenterViewProps> = ({
               className="bg-white border-amber-300 hover:bg-amber-50/50 text-amber-600 text-xs font-bold cursor-pointer"
               icon={<AlertTriangle className="w-3.5 h-3.5 animate-bounce" />}
             >
-              Activar Alerta IA
+              <span className="hidden sm:inline">Activar Alerta IA</span>
+              <span className="sm:hidden">Alerta IA</span>
             </Button>
 
             <Button
@@ -164,7 +166,8 @@ export const ControlCenterView: React.FC<ControlCenterViewProps> = ({
               className="bg-white border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold cursor-pointer"
               icon={<RotateCcw className="w-3.5 h-3.5" />}
             >
-              Reiniciar Simulación
+              <span className="hidden sm:inline">Reiniciar Simulación</span>
+              <span className="sm:hidden">Reiniciar</span>
             </Button>
 
             <Button
@@ -174,7 +177,8 @@ export const ControlCenterView: React.FC<ControlCenterViewProps> = ({
               className="text-xs font-semibold bg-blue-600 cursor-pointer"
               icon={<Share2 className="w-3.5 h-3.5" />}
             >
-              Exportar Reporte
+              <span className="hidden sm:inline">Exportar Reporte</span>
+              <span className="sm:hidden">Exportar</span>
             </Button>
           </div>
         </div>
@@ -403,10 +407,10 @@ export const ControlCenterView: React.FC<ControlCenterViewProps> = ({
           <div className="lg:col-span-8 space-y-6">
             
             {/* TABS CONTROLLER CONTAINER */}
-            <div className="bg-white rounded-xl border border-slate-200 p-1 flex gap-1 shadow-sm font-sans">
+            <div className="bg-white rounded-xl border border-slate-200 p-1 flex overflow-x-auto whitespace-nowrap gap-1 shadow-sm font-sans scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none]">
               <button
                 onClick={() => setMainTab('gps')}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-bold rounded-lg transition-all cursor-pointer focus:outline-none ${
+                className={`flex-1 sm:flex-initial shrink-0 flex items-center justify-center gap-1.5 py-2.5 px-4 text-xs font-bold rounded-lg transition-all cursor-pointer focus:outline-none ${
                   mainTab === 'gps' 
                     ? 'bg-blue-600 text-white shadow-xs' 
                     : 'text-slate-500 hover:text-blue-600 hover:bg-slate-50'
@@ -416,7 +420,7 @@ export const ControlCenterView: React.FC<ControlCenterViewProps> = ({
               </button>
               <button
                 onClick={() => setMainTab('corridors')}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-bold rounded-lg transition-all cursor-pointer focus:outline-none ${
+                className={`flex-1 sm:flex-initial shrink-0 flex items-center justify-center gap-1.5 py-2.5 px-4 text-xs font-bold rounded-lg transition-all cursor-pointer focus:outline-none ${
                   mainTab === 'corridors' 
                     ? 'bg-blue-600 text-white shadow-xs' 
                     : 'text-slate-500 hover:text-blue-600 hover:bg-slate-50'
@@ -426,7 +430,7 @@ export const ControlCenterView: React.FC<ControlCenterViewProps> = ({
               </button>
               <button
                 onClick={() => setMainTab('demand')}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-bold rounded-lg transition-all cursor-pointer focus:outline-none relative ${
+                className={`flex-1 sm:flex-initial shrink-0 flex items-center justify-center gap-1.5 py-2.5 px-4 text-xs font-bold rounded-lg transition-all cursor-pointer focus:outline-none relative ${
                   mainTab === 'demand' 
                     ? 'bg-blue-600 text-white shadow-xs' 
                     : 'text-slate-500 hover:text-blue-600 hover:bg-slate-50'
@@ -442,7 +446,7 @@ export const ControlCenterView: React.FC<ControlCenterViewProps> = ({
 
             {/* TAB PANELS: GPS MAP */}
             {mainTab === 'gps' && (
-              <Card className="p-5 overflow-hidden animate-slide-up font-sans">
+              <Card className="p-5 overflow-hidden animate-slide-up font-sans relative z-10">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-base font-extrabold text-slate-800 flex items-center gap-1.5">
