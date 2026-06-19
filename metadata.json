@@ -1,0 +1,6 @@
+{
+  "name": "MetroFlow AI",
+  "description": "Plataforma inteligente basada en IA para optimizar la experiencia del pasajero y la eficiencia operativa de Metrolínea.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
