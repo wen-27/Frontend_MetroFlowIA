@@ -409,32 +409,32 @@ export const PassengerView: React.FC<PassengerViewProps> = ({
                         : null;
                       
                       return (
-                        <Card key={route.id} className="p-3.5 hover:border-slate-300 transition-all">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-1.5">
-                              <span className="w-7 h-7 bg-blue-50 text-blue-700 font-extrabold rounded-md flex items-center justify-center text-xs border border-blue-150 font-mono">
+                        <Card key={route.id} className="p-3.5 hover:border-slate-300 transition-all overflow-hidden">
+                          <div className="flex items-start gap-2 mb-2 min-w-0">
+                            <div className="flex items-start gap-1.5 min-w-0 flex-1">
+                              <span className="w-7 h-7 bg-blue-50 text-blue-700 font-extrabold rounded-md flex items-center justify-center text-xs border border-blue-150 font-mono shrink-0">
                                 {route.id}
                               </span>
-                              <div className="min-w-0">
-                                <h4 className="font-bold text-xs text-slate-800 leading-none truncate">{route.name}</h4>
+                              <div className="min-w-0 flex-1 pr-1">
+                                <h4 className="font-bold text-xs text-slate-800 leading-tight truncate" title={route.name}>{route.name}</h4>
                                 <p className="text-[9px] text-slate-400 mt-0.5 truncate">{route.origin} → {route.destination}</p>
                               </div>
                             </div>
 
-                            <StatusPill status={route.status} customText={route.delayMinutes > 3 ? `+${route.delayMinutes}m` : 'Normal'} />
+                            <StatusPill status={route.status} customText={route.delayMinutes > 3 ? `+${route.delayMinutes}m` : 'Normal'} className="shrink-0 text-[10px] px-2 py-0.5" />
                           </div>
 
                           <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-50 text-xs">
-                            <div className="flex flex-col">
+                            <div className="flex flex-col min-w-0">
                               <span className="text-[10px] text-slate-400">Próxima unidad</span>
-                              <strong className="text-slate-800 text-xs mt-0.5 flex items-center gap-1 font-mono">
+                              <strong className="text-slate-800 text-xs mt-0.5 flex items-center gap-1 font-mono min-w-0">
                                 <Clock className="w-3.5 h-3.5 text-blue-500" />
                                 {nearestBus ? `en ${nearestBus.etaMinutes} min` : 'Sin datos'}
                               </strong>
                             </div>
-                            <div className="flex flex-col items-end">
+                            <div className="flex flex-col items-end min-w-0">
                               <span className="text-[10px] text-slate-400 block pb-0.5">Ocupación estimada</span>
-                              <OccupancyBadge level={route.occupancy} showPercent={false} />
+                              <OccupancyBadge level={route.occupancy} showPercent={false} className="max-w-full" />
                             </div>
                           </div>
                         </Card>

@@ -4,7 +4,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Route, Station, Bus, Alert, Incident, AiRecommendation, ChatMessage, DemandForecastPoint } from '../types';
+import { AdminBus, AdminRoute, Route, Station, Bus, Alert, Incident, AiRecommendation, ChatMessage, DemandForecastPoint, UpsertBusPayload, UpsertRoutePayload } from '../types';
 import { metroApi } from '../services/metroApi';
 
 const ASSISTANT_RESPONSES = [
@@ -61,6 +61,8 @@ interface MetroContextType {
   incidents: Incident[];
   recommendations: AiRecommendation[];
   peakDemandForecast: DemandForecastPoint[];
+  adminRoutes: AdminRoute[];
+  adminBuses: AdminBus[];
   toasts: ToastMessage[];
   addToast: (type: 'success' | 'warning' | 'info' | 'error', title: string, message: string) => void;
   removeToast: (id: string) => void;
@@ -77,6 +79,13 @@ interface MetroContextType {
   simulateAdditionalBus: (routeId: string) => void;
   triggerSimulatedAlert: () => void;
   resetSimulation: () => void;
+  refreshAdminFleet: () => Promise<void>;
+  createManagedRoute: (route: UpsertRoutePayload) => Promise<void>;
+  updateManagedRoute: (code: string, route: UpsertRoutePayload) => Promise<void>;
+  deleteManagedRoute: (code: string) => Promise<void>;
+  createManagedBus: (bus: UpsertBusPayload) => Promise<void>;
+  updateManagedBus: (code: string, bus: UpsertBusPayload) => Promise<void>;
+  deleteManagedBus: (code: string) => Promise<void>;
   
   // Chat assistance
   chatHistory: ChatMessage[];
@@ -97,6 +106,8 @@ export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [recommendations, setRecommendations] = useState<AiRecommendation[]>([]);
   const [peakDemandForecast, setPeakDemandForecast] = useState<DemandForecastPoint[]>([]);
+  const [adminRoutes, setAdminRoutes] = useState<AdminRoute[]>([]);
+  const [adminBuses, setAdminBuses] = useState<AdminBus[]>([]);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([
     {
@@ -122,9 +133,21 @@ export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setPeakDemandForecast(state.peakDemandForecast);
   };
 
+  const refreshAdminFleet = async () => {
+    const [managedRoutes, managedBuses] = await Promise.all([
+      metroApi.getAdminRoutes(),
+      metroApi.getAdminBuses()
+    ]);
+    setAdminRoutes(managedRoutes);
+    setAdminBuses(managedBuses);
+  };
+
   useEffect(() => {
     loadBackendState().catch(() => {
       addToast('error', 'Backend no disponible', 'No se pudo conectar con MetroFlow API en http://localhost:5000.');
+    });
+    refreshAdminFleet().catch(() => {
+      // The passenger state toast above is enough signal when the backend is down.
     });
   }, []);
 
@@ -310,6 +333,7 @@ export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!incident) return;
     await metroApi.resolveIncident(id);
     await loadBackendState();
+    await refreshAdminFleet();
     addToast('success', 'Incidente Resuelto', `Obstrucción resuelta con éxito en ${incident.location}. Se restablecen frecuencias poco a poco.`);
   };
 
@@ -396,7 +420,68 @@ export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const resetSimulation = async () => {
     await metroApi.reset();
     await loadBackendState();
+    await refreshAdminFleet();
     addToast('info', 'Reiniciar Simulación', 'Los datos del sistema se restablecieron a sus valores de fábrica.');
+  };
+
+  const createManagedRoute = async (route: UpsertRoutePayload) => {
+    try {
+      await metroApi.createRoute(route);
+      await Promise.all([loadBackendState(), refreshAdminFleet()]);
+      addToast('success', 'Ruta creada', `La ruta ${route.name} quedo disponible en el sistema.`);
+    } catch (error) {
+      addToast('error', 'No se pudo crear la ruta', error instanceof Error ? error.message : 'Valida los campos e intenta de nuevo.');
+    }
+  };
+
+  const updateManagedRoute = async (code: string, route: UpsertRoutePayload) => {
+    try {
+      await metroApi.updateRoute(code, route);
+      await Promise.all([loadBackendState(), refreshAdminFleet()]);
+      addToast('success', 'Ruta actualizada', `La ruta ${route.name} fue actualizada.`);
+    } catch (error) {
+      addToast('error', 'No se pudo actualizar la ruta', error instanceof Error ? error.message : 'Valida los campos e intenta de nuevo.');
+    }
+  };
+
+  const deleteManagedRoute = async (code: string) => {
+    try {
+      await metroApi.deleteRoute(code);
+      await Promise.all([loadBackendState(), refreshAdminFleet()]);
+      addToast('info', 'Ruta eliminada', `La ruta ${code} fue retirada del sistema.`);
+    } catch (error) {
+      addToast('error', 'No se pudo eliminar la ruta', error instanceof Error ? error.message : 'Revisa si tiene buses asignados.');
+    }
+  };
+
+  const createManagedBus = async (bus: UpsertBusPayload) => {
+    try {
+      await metroApi.createBus(bus);
+      await Promise.all([loadBackendState(), refreshAdminFleet()]);
+      addToast('success', 'Bus creado', `El bus ${bus.internalCode} fue asignado a la ruta ${bus.routeCode}.`);
+    } catch (error) {
+      addToast('error', 'No se pudo crear el bus', error instanceof Error ? error.message : 'Valida los campos e intenta de nuevo.');
+    }
+  };
+
+  const updateManagedBus = async (code: string, bus: UpsertBusPayload) => {
+    try {
+      await metroApi.updateBus(code, bus);
+      await Promise.all([loadBackendState(), refreshAdminFleet()]);
+      addToast('success', 'Bus actualizado', `El bus ${bus.internalCode} fue actualizado.`);
+    } catch (error) {
+      addToast('error', 'No se pudo actualizar el bus', error instanceof Error ? error.message : 'Valida los campos e intenta de nuevo.');
+    }
+  };
+
+  const deleteManagedBus = async (code: string) => {
+    try {
+      await metroApi.deleteBus(code);
+      await Promise.all([loadBackendState(), refreshAdminFleet()]);
+      addToast('info', 'Bus eliminado', `El bus ${code} fue retirado de operacion.`);
+    } catch (error) {
+      addToast('error', 'No se pudo eliminar el bus', error instanceof Error ? error.message : 'Intenta de nuevo.');
+    }
   };
 
   // Send message to virtual assistant
@@ -599,6 +684,8 @@ export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         incidents,
         recommendations,
         peakDemandForecast,
+        adminRoutes,
+        adminBuses,
         toasts,
         addToast,
         removeToast,
@@ -611,6 +698,13 @@ export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         simulateAdditionalBus,
         triggerSimulatedAlert,
         resetSimulation,
+        refreshAdminFleet,
+        createManagedRoute,
+        updateManagedRoute,
+        deleteManagedRoute,
+        createManagedBus,
+        updateManagedBus,
+        deleteManagedBus,
         chatHistory,
         chatGuideStep,
         chatOrigin,

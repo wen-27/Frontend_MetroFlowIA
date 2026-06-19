@@ -13,6 +13,7 @@ import { OccupancyBadge } from '../../components/molecules/OccupancyBadge';
 import { Button } from '../../components/atoms/Button';
 import { Card } from '../../components/atoms/Card';
 import { AlertCard } from '../../components/molecules/AlertCard';
+import { AdminFleetManager } from './AdminFleetManager';
 import { 
   ArrowLeft, 
   Settings, 
@@ -66,7 +67,7 @@ export const ControlCenterView: React.FC<ControlCenterViewProps> = ({
   } = useMetro();
 
   // Tabs for main content workspace
-  const [mainTab, setMainTab] = useState<'gps' | 'corridors' | 'demand'>('gps');
+  const [mainTab, setMainTab] = useState<'gps' | 'corridors' | 'demand' | 'fleet'>('gps');
 
   // Selected Route or Station for sub-details
   const [selectedRouteId, setSelectedRouteId] = useState<string>('R1');
@@ -442,6 +443,16 @@ export const ControlCenterView: React.FC<ControlCenterViewProps> = ({
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500"></span>
                 </span>
               </button>
+              <button
+                onClick={() => setMainTab('fleet')}
+                className={`flex-1 sm:flex-initial shrink-0 flex items-center justify-center gap-1.5 py-2.5 px-4 text-xs font-bold rounded-lg transition-all cursor-pointer focus:outline-none ${
+                  mainTab === 'fleet'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-blue-600 hover:bg-slate-50'
+                }`}
+              >
+                <BusIcon className="w-4 h-4" /> Rutas & Buses
+              </button>
             </div>
 
             {/* TAB PANELS: GPS MAP */}
@@ -661,6 +672,10 @@ export const ControlCenterView: React.FC<ControlCenterViewProps> = ({
                 </div>
 
               </div>
+            )}
+
+            {mainTab === 'fleet' && (
+              <AdminFleetManager />
             )}
 
           </div>

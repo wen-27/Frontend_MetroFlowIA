@@ -96,3 +96,70 @@ export interface MetroStatePayload {
   recommendations: AiRecommendation[];
   peakDemandForecast: DemandForecastPoint[];
 }
+
+export interface AdminRouteStation {
+  code: string;
+  name: string;
+  stopOrder: number;
+  estimatedMinutesFromStart: number;
+  isTransferPoint: boolean;
+}
+
+export interface AdminRoute {
+  id: string;
+  code: string;
+  name: string;
+  origin: string;
+  destination: string;
+  avgTimeMinutes: number;
+  delayMinutes: number;
+  occupancy: Route['occupancy'];
+  status: Route['status'];
+  routeType: string;
+  activeBuses: number;
+  stations: AdminRouteStation[];
+}
+
+export interface AdminBus {
+  id: string;
+  internalCode: string;
+  plate: string;
+  driverName: string;
+  busType: string;
+  capacity: number;
+  currentOccupancy: number;
+  occupancy: Bus['occupancy'];
+  routeId: string;
+  routeName: string;
+  nextStation: string;
+  etaMinutes: number;
+  status: Bus['status'];
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface UpsertRoutePayload {
+  code?: string;
+  name: string;
+  description?: string;
+  stationCodes: string[];
+  avgTimeMinutes: number;
+  delayMinutes: number;
+  occupancy: Route['occupancy'];
+  status: Route['status'];
+  routeType: string;
+}
+
+export interface UpsertBusPayload {
+  internalCode: string;
+  plate?: string;
+  driverName: string;
+  busType: string;
+  capacity: number;
+  currentOccupancy: number;
+  occupancy: Bus['occupancy'];
+  routeCode: string;
+  nextStationCode?: string;
+  etaMinutes: number;
+  status: Bus['status'];
+}
