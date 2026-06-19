@@ -28,6 +28,24 @@ const ASSISTANT_RESPONSES = [
 
 const DEFAULT_AI_RESPONSE = 'Hola, soy el Asistente Inteligente de MetroFlow AI. Te guiaré con gusto sobre rutas, tiempos de llegada, alertas e información general en tiempo real del sistema Metrolínea.';
 
+type ChatGuideStep = 'origin' | 'destination' | 'preference' | 'idle';
+type RoutePreference = 'Mas rapida' | 'Menos congestion' | 'Menos transbordos';
+
+interface RouteSearchResult {
+  originName: string;
+  destName: string;
+  routeCode: string;
+  routeName: string;
+  totalTime: number;
+  nextArrivalMinutes: number;
+  transfers: number;
+  walkTime: number;
+  estimatedOccupancy: Bus['occupancy'];
+  confidenceScore: number;
+  status: Route['status'];
+  aiAdvice: string;
+}
+
 interface ToastMessage {
   id: string;
   type: 'success' | 'warning' | 'info' | 'error';
@@ -48,7 +66,7 @@ interface MetroContextType {
   removeToast: (id: string) => void;
   
   // Passenger actions
-  searchRoute: (origin: string, destination: string) => any;
+  searchRoute: (origin: string, destination: string) => RouteSearchResult | null;
   
   // Control center actions
   addIncident: (incident: Omit<Incident, 'id' | 'activeDurationMinutes'>) => void;
@@ -62,6 +80,9 @@ interface MetroContextType {
   
   // Chat assistance
   chatHistory: ChatMessage[];
+  chatGuideStep: ChatGuideStep;
+  chatOrigin: string;
+  chatDestination: string;
   sendChatMessage: (text: string) => void;
   clearChat: () => void;
 }
@@ -86,6 +107,9 @@ export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       suggestions: ['¿Cómo llego de Portal Cañaveral al Portal Estadio Montanini?', '¿Hay retrasos actuales?', '¿Está llena la estación Portal Provenza?']
     }
   ]);
+  const [chatGuideStep, setChatGuideStep] = useState<ChatGuideStep>('origin');
+  const [chatOrigin, setChatOrigin] = useState('');
+  const [chatDestination, setChatDestination] = useState('');
 
   const loadBackendState = async () => {
     const state = await metroApi.getState();
@@ -120,7 +144,7 @@ export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Search transit route intelligently based on station levels, routes, delays
-  const searchRoute = (origin: string, destination: string) => {
+  const searchRoute = (origin: string, destination: string): RouteSearchResult | null => {
     if (!origin || !destination || stations.length === 0 || routes.length === 0) return null;
 
     // Normalizing
@@ -171,6 +195,94 @@ export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       confidenceScore: confidence,
       status: matchingRoute.status,
       aiAdvice: `La inteligencia artificial detecta que la estación ${originStation.name} tiene un ${originStation.occupancyCurrent}% de ocupación. Se sugiere abordar en plataforma intermedia. El tiempo total aproximado es de ${pathMinutes + walkMinutes} minutos.`
+    };
+  };
+
+  const normalizeText = (value: string) =>
+    value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\w\s-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const stationSuggestions = () => {
+    const priorityNames = ['Portal Canaveral', 'Portal Provenza', 'Portal Estadio Montanini', 'UIS', 'Centro', 'Giron'];
+    const prioritized = priorityNames
+      .map((name) => stations.find((station) => normalizeText(station.name).includes(normalizeText(name))))
+      .filter((station): station is Station => Boolean(station));
+    const seen = new Set(prioritized.map((station) => station.id));
+    const fallback = stations.filter((station) => !seen.has(station.id)).slice(0, Math.max(0, 6 - prioritized.length));
+
+    return [...prioritized, ...fallback].slice(0, 6).map((station) => station.name);
+  };
+
+  const findStationName = (text: string) => {
+    const normalizedInput = normalizeText(text);
+    return stations.find((station) => {
+      const normalizedStation = normalizeText(station.name);
+      const compactStation = normalizedStation.replace(/^portal\s+/, '');
+
+      return normalizedInput === normalizedStation ||
+        normalizedInput === compactStation ||
+        normalizedInput.includes(normalizedStation) ||
+        normalizedInput.includes(compactStation);
+    })?.name;
+  };
+
+  const extractOriginDestination = (text: string) => {
+    const normalizedInput = normalizeText(text);
+    const match = normalizedInput.match(/\b(?:de|del)\s+(.+?)\s+(?:a|al|hacia|hasta)\s+(.+)$/);
+    if (!match) return null;
+
+    const origin = findStationName(match[1]);
+    const destination = findStationName(match[2]);
+    return origin && destination ? { origin, destination } : null;
+  };
+
+  const formatRouteAnswer = (result: RouteSearchResult, preference: RoutePreference) => {
+    const occupancyLabels: Record<Bus['occupancy'], string> = {
+      low: 'baja',
+      medium: 'media',
+      high: 'alta',
+      critical: 'critica'
+    };
+
+    const preferenceAdvice: Record<RoutePreference, string> = {
+      'Mas rapida': 'priorice el menor tiempo total disponible ahora',
+      'Menos congestion': 'evite estaciones con ocupacion alta cuando sea posible',
+      'Menos transbordos': 'reduzca cambios de ruta aunque el viaje pueda tardar unos minutos mas'
+    };
+
+    return [
+      `Ruta recomendada de **${result.originName}** a **${result.destName}**: toma **${result.routeCode} - ${result.routeName}**.`,
+      `Tiempo estimado: **${result.totalTime} min**. Proximo bus en **${result.nextArrivalMinutes} min**. Transbordos: **${result.transfers}**. Caminata: **${result.walkTime} min**.`,
+      `Ocupacion estimada del bus: **${occupancyLabels[result.estimatedOccupancy]}**. Estado de ruta: **${result.status}**. Confianza IA: **${result.confidenceScore}%**.`,
+      `Preferencia aplicada: **${preference}**, asi que la recomendacion ${preferenceAdvice[preference]}.`,
+      result.aiAdvice
+    ].join('\n');
+  };
+
+  const buildRouteFromChat = (origin: string, destination: string, preference: RoutePreference) => {
+    if (origin === destination) {
+      return {
+        text: 'El origen y el destino son la misma estacion. Elige un destino diferente para calcular una ruta util.',
+        suggestions: stationSuggestions()
+      };
+    }
+
+    const result = searchRoute(origin, destination);
+    if (!result) {
+      return {
+        text: 'Todavia no tengo datos suficientes del backend para calcular esa ruta. Verifica que el backend este corriendo y vuelve a intentar.',
+        suggestions: ['Reintentar ruta', 'Ver retrasos actuales']
+      };
+    }
+
+    return {
+      text: formatRouteAnswer(result, preference),
+      suggestions: ['Buscar otra ruta', 'Ver retrasos actuales', `Estado de ${result.destName}`]
     };
   };
 
@@ -308,9 +420,107 @@ export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const normalizedInput = text.toLowerCase();
       let matchedResponse = '';
       let suggestions: string[] = [];
+      const exactRouteRequest = extractOriginDestination(text);
 
       // Dynamic real-time values puller
-      if (normalizedInput.includes('provenza')) {
+      if (normalizedInput.includes('buscar mejor ruta') || normalizedInput.includes('buscar otra ruta') || normalizedInput.includes('reintentar ruta')) {
+        setChatGuideStep('origin');
+        setChatOrigin('');
+        setChatDestination('');
+        matchedResponse = 'Perfecto. Primero elige tu estacion de origen.';
+        suggestions = stationSuggestions();
+      } else if (exactRouteRequest) {
+        const routeAnswer = buildRouteFromChat(exactRouteRequest.origin, exactRouteRequest.destination, 'Mas rapida');
+        setChatGuideStep('idle');
+        setChatOrigin(exactRouteRequest.origin);
+        setChatDestination(exactRouteRequest.destination);
+        matchedResponse = routeAnswer.text;
+        suggestions = routeAnswer.suggestions;
+      } else if (chatGuideStep === 'idle' && normalizedInput.includes('provenza')) {
+        const provState = stations.find(s => s.name === 'Portal Provenza');
+        const occupancy = provState ? provState.occupancyCurrent : 94;
+        matchedResponse = `La estacion **Portal Provenza** presenta una ocupacion actual del **${occupancy}%** (${occupancy > 85 ? 'Nivel Critico' : occupancy > 60 ? 'Alto' : 'Normal'}). ${
+          occupancy > 80
+            ? 'La IA recomienda abordar unidades expresas o elegir una ruta menos congestionada.'
+            : 'El flujo de transbordo se encuentra estabilizado.'
+        }`;
+        suggestions = ['Buscar mejor ruta', 'Ver retrasos actuales'];
+      } else if (normalizedInput.includes('retraso') || normalizedInput.includes('alertas') || normalizedInput.includes('problema')) {
+        const activeDelays = routes.filter(r => r.delayMinutes > 0);
+        if (activeDelays.length > 0) {
+          const delayText = activeDelays.map(r => `**${r.id}** (+${r.delayMinutes} mins)`).join(', ');
+          const highestDelay = [...activeDelays].sort((a, b) => b.delayMinutes - a.delayMinutes)[0];
+          matchedResponse = `Actualmente detectamos demoras activas en: ${delayText}. El mayor retraso se ubica en la ruta **${highestDelay?.id}**.`;
+        } else {
+          matchedResponse = 'Todas las rutas se encuentran operando **a tiempo** sin retrasos significativos.';
+        }
+        suggestions = ['Buscar mejor ruta', 'Estado de Portal Provenza'];
+      } else if (chatGuideStep === 'idle') {
+        const origin = findStationName(text);
+        if (origin) {
+          setChatOrigin(origin);
+          setChatDestination('');
+          setChatGuideStep('destination');
+          matchedResponse = `Nueva busqueda iniciada desde **${origin}**.\nAhora elige la estacion de destino.`;
+          suggestions = stationSuggestions().filter((station) => station !== origin);
+        } else {
+          matchedResponse = 'Para buscar otra ruta usa el boton **Buscar otra ruta** o escribe una frase como "de Portal Provenza a UIS".';
+          suggestions = ['Buscar otra ruta', 'Ver retrasos actuales', 'Estado de Portal Provenza'];
+        }
+      } else if (chatGuideStep === 'origin') {
+        const origin = findStationName(text);
+        if (origin) {
+          setChatOrigin(origin);
+          setChatDestination('');
+          setChatGuideStep('destination');
+          matchedResponse = `Origen seleccionado: **${origin}**.\nAhora elige la estacion de destino.`;
+          suggestions = stationSuggestions().filter((station) => station !== origin);
+        } else {
+          matchedResponse = 'No encontre esa estacion en el sistema. Elige una de estas opciones para iniciar la busqueda.';
+          suggestions = stationSuggestions();
+        }
+      } else if (chatGuideStep === 'destination') {
+        const destination = findStationName(text);
+        if (destination) {
+          if (destination === chatOrigin) {
+            matchedResponse = 'El destino no puede ser igual al origen. Elige otra estacion para continuar.';
+            suggestions = stationSuggestions().filter((station) => station !== chatOrigin);
+          } else {
+            setChatDestination(destination);
+            setChatGuideStep('preference');
+            matchedResponse = `Destino seleccionado: **${destination}**.\nQue prefieres para calcular la ruta?`;
+            suggestions = ['Mas rapida', 'Menos congestion', 'Menos transbordos'].map((option) => `${option}: ${chatOrigin} -> ${destination}`);
+          }
+        } else {
+          matchedResponse = 'No encontre ese destino. Elige una estacion de la lista para continuar.';
+          suggestions = stationSuggestions().filter((station) => station !== chatOrigin);
+        }
+      } else if (chatGuideStep === 'preference') {
+        const preference: RoutePreference = normalizedInput.includes('congestion')
+          ? 'Menos congestion'
+          : normalizedInput.includes('transbordo')
+            ? 'Menos transbordos'
+            : 'Mas rapida';
+        const [, routeText = ''] = text.split(':');
+        const routeParts = routeText.split('->');
+        const origin = findStationName(routeParts[0] || chatOrigin) || chatOrigin;
+        const destination = findStationName(routeParts[1] || text);
+
+        if (origin && destination) {
+          const routeAnswer = buildRouteFromChat(origin, destination, preference);
+          setChatGuideStep('idle');
+          setChatOrigin(origin);
+          setChatDestination(destination);
+          matchedResponse = routeAnswer.text;
+          suggestions = routeAnswer.suggestions;
+        } else {
+          matchedResponse = 'Me falto identificar origen o destino. Empecemos de nuevo: elige tu estacion de origen.';
+          setChatGuideStep('origin');
+          setChatOrigin('');
+          setChatDestination('');
+          suggestions = stationSuggestions();
+        }
+      } else if (normalizedInput.includes('provenza')) {
         const provState = stations.find(s => s.name === 'Portal Provenza');
         const occupancy = provState ? provState.occupancyCurrent : 94;
         matchedResponse = `La estación **Portal Provenza** presenta una ocupación actual del **${occupancy}%** (${occupancy > 85 ? 'Nivel Crítico' : occupancy > 60 ? 'Alto' : 'Normal'}). ${
@@ -365,6 +575,9 @@ export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const clearChat = () => {
+    setChatGuideStep('origin');
+    setChatOrigin('');
+    setChatDestination('');
     setChatHistory([
       {
         id: 'welcome',
@@ -399,6 +612,9 @@ export const MetroProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         triggerSimulatedAlert,
         resetSimulation,
         chatHistory,
+        chatGuideStep,
+        chatOrigin,
+        chatDestination,
         sendChatMessage,
         clearChat
       }}
